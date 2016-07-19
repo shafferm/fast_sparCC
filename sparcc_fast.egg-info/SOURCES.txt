@@ -1,0 +1,11 @@
+setup.py
+scripts/sparcc-fast.py
+sparcc_fast/__init__.py
+sparcc_fast/fast_sparcc_correlations.py
+sparcc_fast/sparcc_functions.py
+sparcc_fast/utils.py
+sparcc_fast.egg-info/PKG-INFO
+sparcc_fast.egg-info/SOURCES.txt
+sparcc_fast.egg-info/dependency_links.txt
+sparcc_fast.egg-info/requires.txt
+sparcc_fast.egg-info/top_level.txt

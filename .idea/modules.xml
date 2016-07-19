@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../fast_sparCC/.idea/sparcc-fast.iml" filepath="$PROJECT_DIR$/../fast_sparCC/.idea/sparcc-fast.iml" />
+    </modules>
+  </component>
+</project>
