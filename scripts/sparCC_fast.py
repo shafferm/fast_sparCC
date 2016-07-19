@@ -1,3 +1,5 @@
+#!/usr/local/bin/python2
+
 import argparse
 from biom import load_table
 from sparcc_fast.sparcc_functions import basis_corr
@@ -7,7 +9,6 @@ from sparcc_fast.bootstrap_correlations import bootstrap_correlations
 __author__ = 'shafferm'
 
 
-# TODO: Add in filter table by number of observations
 # TODO: implement sparse pandas dataframe
 
 
