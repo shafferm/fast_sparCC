@@ -43,6 +43,7 @@ Example usage of sparcc correlations:
 
 from biom import load_table
 from sparcc_fast import sparcc_correlation
+
 table = load_table("example.biom")
 correls = sparcc_correlation(table)
 correls.to_csv("correls.txt")
@@ -54,6 +55,7 @@ Example usage of sparcc correlations with bootstrapping:
 
 from biom import load_table
 from sparcc_fast import sparcc_correlation_w_bootstraps
+
 table = load_table("example.biom")
 correls = sparcc_correlation_with_bootstraps(table, procs=3, bootstraps=1000)
 correls.to_csv("correls.txt")
