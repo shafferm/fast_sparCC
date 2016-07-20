@@ -5,7 +5,7 @@ __author__ = 'shafferm'
 
 setup(
     name="sparcc_fast",
-    version="0.1.1",
+    version="v0.1",
     author="Michael Shaffer",
     author_email="michael.shaffer@ucdenver.edu",
     description="A fast command line interface to find correlations in biom tables with SparCC.",
