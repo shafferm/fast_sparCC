@@ -3,4 +3,5 @@ dist/
 .eggs/
 .idea/
 *.egg-info/
-
+*.pyc
+sparcc_fast/*.pyc
