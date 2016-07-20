@@ -4,7 +4,7 @@ __author__ = 'shafferm'
 
 
 setup(
-    name="sparcc_fast",
+    name="fast_sparCC",
     version="v0.1.1",
     author="Michael Shaffer",
     author_email="michael.shaffer@ucdenver.edu",
