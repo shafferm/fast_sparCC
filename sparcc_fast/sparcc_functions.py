@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import nanmedian
 from numpy.random.mtrand import dirichlet
 
 __author__ = 'shafferm'
@@ -240,8 +239,8 @@ def basis_corr(frame, iter=20, th=.1, xiter=10):
         var_list.append(np.diag(cov_sparse))
         cor_list.append(cor_sparse)
     cor_array = np.array(cor_list)
-    var_med = nanmedian(var_list,axis=0) #median variances
-    cor_med = nanmedian(cor_array,axis=0) #median correlations
+    var_med = np.nanmedian(var_list,axis=0) #median variances
+    cor_med = np.nanmedian(cor_array,axis=0) #median correlations
     x,y = np.meshgrid(var_med,var_med)
     cov_med = cor_med * x**0.5 * y**0.5
 
