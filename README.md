@@ -5,7 +5,7 @@ A way to use sparCC on biom formatted tables such as those output by QIIME. Outp
 Includes options for filtering input tables, multiprocessing for bootstraping correlations values to determine significance and p-value adjustment with FDR or Bonferroni correction.
 
 ##Installation Instructions
-Install github from pip using the command:
+Install from pip using the command:
 ```
 pip install fast_sparCC
 ```
