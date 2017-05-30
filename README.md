@@ -4,7 +4,7 @@ A fast command line interface to find correlations in biom tables with sparCC.
 A way to use sparCC on biom formatted tables such as those output by QIIME. Outputs a tab delimited file with pairs of features, correlation values and optional p-values.
 Includes options for filtering input tables, multiprocessing for bootstraping correlations values to determine significance and p-value adjustment with FDR or Bonferroni correction.
 
-##Installation Instructions
+## Installation Instructions
 Install from pip using the command:
 ```
 pip install fast_sparCC
@@ -17,7 +17,7 @@ cd fast_sparCC
 python setup.py install
 ```
 
-##Example usage:
+## Example usage:
 Calculate correlations only:
 ```
 fast_sparCC.py -i example.biom -o correls.txt --corr_only
@@ -38,7 +38,7 @@ Calculate correlations and p-values based on 1000 bootstraps and 10 processors:
 fast_sparCC.py -i example.biom -o correls.txt -b 1000 --procs 10
 ```
 
-##API for use in custom python scripts:
+## API for use in custom python scripts:
 Additionally the functions can be imported for use in your own python scripts. This can be used with and without
 bootstrapping to calculate p-values.
 
