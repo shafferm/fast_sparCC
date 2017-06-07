@@ -32,12 +32,12 @@ def main(args):
     df = utils.biom_to_pandas(table)
 
     # filter
-    if args.min_sample is not None:
-        table = min_sample_filter(df, args.min_sample)
+    if args.min_samples is not None:
+        df = min_sample_filter(df, args.min_samples)
         print "Table filtered: " + str(table.shape[1]) + " observations"
         print ""
     elif args.sparcc_filter is True:
-        table = sparcc_paper_filter(df)
+        df = sparcc_paper_filter(df)
         print "Table filtered: " + str(table.shape[1]) + " observations"
         print ""
 
@@ -46,6 +46,7 @@ def main(args):
     correls = utils.df_to_correls(cor)
 
     if not args.corr_only:
+        print "bootstrapping"
         correls['p_value'] = bootstrap_correlations(df, cor, args.boots, args.procs)
         # adjust p-value if desired
         if args.padjust == "FDR":
@@ -67,9 +68,8 @@ if __name__ == '__main__':
                         action="store_true", default=False)
     parser.add_argument("--p_adjust", help="multiple testing corretion method: FDR, bonferroni or none", default="FDR")
     parser.add_argument("--sparcc_filter", help="filter input table according to parameters defined in Inferring"
-                                                "Correlation Networks from Genomic Survey Data",
-                        default=False,action="store_true")
+                                                "Correlation Networks from Genomic Survey Data", default=False,
+                        action="store_true")
     parser.add_argument("--min_samples", help="minimum number of samples a observation must be present in to be kept"
-                                              "in anaylsis",
-                        type=int)
+                                              "in anaylsis", type=int)
     main(parser.parse_args())
