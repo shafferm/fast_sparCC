@@ -5,6 +5,20 @@ import pandas as pd
 __author__ = 'shafferm'
 
 
+def sparcc_paper_filter(table):
+    """if a observation averages more than 2 reads per sample then keep,
+    if a sample has more than 500 reads then keep"""
+    table = table[table.sum(axis=1) > 500]
+    table = table.loc[:, table.mean(axis=0) > 2]
+    return table
+
+
+def min_sample_filter(table, min_samples):
+    """remove observations not present in more than a minimum number of samples"""
+    zeroes_per_column = (table > 0).sum(axis=0)
+    return table.loc[:, zeroes_per_column > min_samples]
+
+
 def bh_adjust(pvalues):
     """benjamini-hochberg p-value adjustment stolen from
     http://stackoverflow.com/questions/7450957/how-to-implement-rs-p-adjust-in-python

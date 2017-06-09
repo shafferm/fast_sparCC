@@ -5,26 +5,12 @@ from biom import load_table
 from sparcc_fast.sparcc_functions import basis_corr
 from sparcc_fast import utils
 from sparcc_fast.bootstrap_correlations import bootstrap_correlations
+from sparcc_fast.utils import sparcc_paper_filter, min_sample_filter
 
 __author__ = 'shafferm'
 
 
 # TODO: implement sparse pandas dataframe
-
-
-def sparcc_paper_filter(table):
-    """if a observation averages more than 2 reads per sample then keep,
-    if a sample has more than 500 reads then keep"""
-    table = table[table.sum(axis=1) > 500]
-    table = table.loc[:, table.mean(axis=0) > 2]
-    return table
-
-
-def min_sample_filter(table, min_samples):
-    """remove observations not present in more than a minimum number of samples"""
-    zeroes_per_column = (table > 0).sum(axis=0)
-    return table.loc[:, zeroes_per_column > min_samples]
-
 
 def main(args):
     print "reading in table"
