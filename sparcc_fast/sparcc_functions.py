@@ -20,8 +20,8 @@ def variation_mat(frame):
         xx_t = xx.transpose(0, 2, 1)
         try:
             l = np.log(1.*xx/xx_t)
-            V = l.var(axis=0, ddof=1)
-            return V
+            v_mat = l.var(axis=0, ddof=1)
+            return v_mat
         except MemoryError:
             return variation_mat_slow(frame)
 
@@ -34,15 +34,15 @@ def variation_mat_slow(frame):
     Slower version to be used in case the fast version runs out of memory."""
     frame_a = 1.*np.asarray(frame)
     k = frame_a.shape[1]
-    V = np.zeros((k, k))
+    v_mat = np.zeros((k, k))
     for i in range(k-1):
         for j in range(i+1, k):
             y = np.array(np.log(frame_a[:, i]/frame_a[:, j]))
             # set ddof to divide by (n-1), rather than n, thus getting an unbiased estimator (rather than the ML one).
             v = np.var(y, ddof=1)
-            V[i, j] = v
-            V[j, i] = v
-    return V
+            v_mat[i, j] = v
+            v_mat[j, i] = v
+    return v_mat
 
 
 def to_fractions(frame, p_counts=1, axis=0):
@@ -52,14 +52,8 @@ def to_fractions(frame, p_counts=1, axis=0):
 
     Parameters
     ----------
-    method : string {'dirichlet' (default) | 'normalize' | 'pseudo'}
-        dirichlet - randomly draw from the corresponding posterior
-                    Dirichlet distribution with a uniform prior.
-                    That is, for a vector of counts C,
-                    draw the fractions from Dirichlet(C+1).
-        normalize - simply divide each row by its sum.
-        pseudo    - add given pseudo count (defualt 1) to each count and
-                    do simple normalization.
+    frame : pd.DataFrame
+        2D array of counts. Columns are components, rows are samples.
     p_counts : int/float (default 1)
         The value of the pseudo counts to add to all counts.
         Used only if method is dirichlet
@@ -84,38 +78,38 @@ def to_fractions(frame, p_counts=1, axis=0):
     return fracs
 
 
-def basis_var(Var_mat, M, V_min=1e-10):
+def basis_var(var_mat, m, v_min=1e-10):
     """
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/***
     Estimate the variances of the basis of the compositional data x.
     Assumes that the correlations are sparse (mean correlation is small).
-    The element of V_mat are refered to as t_ij in the SparCC paper.
+    The element of var_mat are refered to as t_ij in the SparCC paper.
     """
     # compute basis variances
     try:
-        M_inv = np.linalg.inv(M)
+        m_inv = np.linalg.inv(m)
     except:
-        M_inv = np.linalg.pinv(M)
-    V_vec = Var_mat.sum(axis=1)  # elements are t_i's of SparCC paper
-    V_base = np.dot(M_inv, V_vec)  # basis variances.
+        m_inv = np.linalg.pinv(m)
+    v_vec = var_mat.sum(axis=1)  # elements are t_i's of SparCC paper
+    v_base = np.dot(m_inv, v_vec)  # basis variances.
     # if any variances are <0 set them to V_min
-    V_base[V_base <= 0] = V_min
-    return V_base
+    v_base[v_base <= 0] = v_min
+    return v_base
 
 
-def C_from_V(Var_mat, V_base):
+def c_from_v(var_mat, v_base):
     """
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/***
     Given the estimated basis variances and observed fractions variation matrix,
     compute the basis correlation & covaraince matrices.
     """
-    Vi, Vj = np.meshgrid(V_base, V_base)
-    Cov_base = 0.5*(Vi + Vj - Var_mat)
-    C_base = Cov_base/np.sqrt(Vi)/np.sqrt(Vj)
-    return C_base, Cov_base
+    v_i, v_j = np.meshgrid(v_base, v_base)
+    cov_base = 0.5*(v_i + v_j - var_mat)
+    c_base = cov_base/np.sqrt(v_i)/np.sqrt(v_j)
+    return c_base, cov_base
 
 
-def new_excluded_pair(C, th=0.1, previously_excluded=None):
+def new_excluded_pair(c_mat, th=0.1, previously_excluded=None):
     """
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/***
     Find component pair with highest correlation among pairs that
@@ -125,10 +119,10 @@ def new_excluded_pair(C, th=0.1, previously_excluded=None):
     """
     if previously_excluded is None:
         previously_excluded = []
-    C_temp = np.triu(abs(C), 1)  # work only on upper triangle, excluding diagonal
-    C_temp[zip(*previously_excluded)] = 0
-    i, j = np.unravel_index(np.argmax(C_temp), C_temp.shape)
-    cmax = C_temp[i, j]
+    c_temp = np.triu(abs(c_mat), 1)  # work only on upper triangle, excluding diagonal
+    c_temp[zip(*previously_excluded)] = 0
+    i, j = np.unravel_index(np.argmax(c_temp), c_temp.shape)
+    cmax = c_temp[i, j]
     if cmax > th:
         return i, j
     else:
@@ -142,59 +136,59 @@ def run_sparcc(f, th=.1, xiter=10):
     Assumes that the correlations are sparse (mean correlation is small).
     """
     # observed log-ratio variances
-    Var_mat = variation_mat(f)
-    Var_mat_temp = Var_mat.copy()
+    var_mat = variation_mat(f)
+    var_mat_temp = var_mat.copy()
     # Make matrix from eqs. 13 of SparCC paper such that: t_i = M * Basis_Varainces
-    D = Var_mat.shape[0]  # number of components
-    M = np.ones((D, D)) + np.diag([D-2]*D)
+    d = var_mat.shape[0]  # number of components
+    m = np.ones((d, d)) + np.diag([d-2]*d)
     # get approx. basis variances and from them basis covariances/correlations
-    V_base = basis_var(f, Var_mat_temp, M)
-    C_base, Cov_base = C_from_V(Var_mat, V_base)
+    v_base = basis_var(f, var_mat_temp, m)
+    c_base, cov_base = c_from_v(var_mat, v_base)
     # Refine by excluding strongly correlated pairs
     excluded_pairs = []
     excluded_comp = np.array([])
     for xi in range(xiter):
         # search for new pair to exclude
-        to_exclude = new_excluded_pair(C_base, th, excluded_pairs)  # i,j pair, or None
+        to_exclude = new_excluded_pair(c_base, th, excluded_pairs)  # i,j pair, or None
         if to_exclude is None:  # terminate if no new pairs to exclude
             break
         # exclude pair
         excluded_pairs.append(to_exclude)
         i, j = to_exclude
-        M[i, j] -= 1
-        M[j, i] -= 1
-        M[i, i] -= 1
-        M[j, j] -= 1
+        m[i, j] -= 1
+        m[j, i] -= 1
+        m[i, i] -= 1
+        m[j, j] -= 1
         inds = zip(*excluded_pairs)
-        Var_mat_temp[inds] = 0
-        Var_mat_temp.T[inds] = 0
+        var_mat_temp[inds] = 0
+        var_mat_temp.T[inds] = 0
         # search for new components to exclude
         nexcluded = np.bincount(np.ravel(excluded_pairs))  # number of excluded pairs for each component
         excluded_comp_prev = set(excluded_comp.copy())
-        excluded_comp = np.where(nexcluded >= D-3)[0]
+        excluded_comp = np.where(nexcluded >= d-3)[0]
         excluded_comp_new = set(excluded_comp) - excluded_comp_prev
         if len(excluded_comp_new) > 0:
             print excluded_comp
             # check if enough components left
-            if len(excluded_comp) > D-4:
+            if len(excluded_comp) > d-4:
                 raise ValueError('Too many component excluded. SparCC will not complete.')
             for xcomp in excluded_comp_new:
-                Var_mat_temp[xcomp, :] = 0
-                Var_mat_temp[:, xcomp] = 0
-                M[xcomp, :] = 0
-                M[:, xcomp] = 0
-                M[xcomp, xcomp] = 1
+                var_mat_temp[xcomp, :] = 0
+                var_mat_temp[:, xcomp] = 0
+                m[xcomp, :] = 0
+                m[:, xcomp] = 0
+                m[xcomp, xcomp] = 1
         # run another sparcc iteration
-        V_base = basis_var(f, Var_mat_temp, M)
-        C_base, Cov_base = C_from_V(Var_mat, V_base)
+        v_base = basis_var(f, var_mat_temp, m)
+        c_base, cov_base = c_from_v(var_mat, v_base)
         # set excluded components infered values to nans
         for xcomp in excluded_comp:
-            V_base[xcomp] = np.nan
-            C_base[xcomp, :] = np.nan
-            C_base[:, xcomp] = np.nan
-            Cov_base[xcomp, :] = np.nan
-            Cov_base[:, xcomp] = np.nan
-    return V_base, C_base, Cov_base
+            v_base[xcomp] = np.nan
+            c_base[xcomp, :] = np.nan
+            c_base[:, xcomp] = np.nan
+            cov_base[xcomp, :] = np.nan
+            cov_base[:, xcomp] = np.nan
+    return v_base, c_base, cov_base
 
 
 def basis_corr(frame, iters=20, th=.1, xiter=10):
@@ -208,6 +202,12 @@ def basis_corr(frame, iters=20, th=.1, xiter=10):
     ----------
     frame : pd.Dataframe
         2D array of counts. Columns are components, rows are samples.
+    iters : int
+        default 20, number of estimation iteration to average over.
+    th : float
+        0<th<1, default 0.1, exclusion threshold for SparCC.
+    xiter : int
+        default 10, number of exclusion iterations for sparcc.
 
     Returns
     -------
@@ -218,14 +218,6 @@ def basis_corr(frame, iters=20, th=.1, xiter=10):
         If method in {SparCC, clr} : Estimated covariance matrix.
         Labels are column labels of input frame.
         Otherwise: None.
-
-    =======   ============ =======   ================================================
-    kwarg     Accepts      Default   Desctiption
-    =======   ============ =======   ================================================
-    iter      int          20        number of estimation iteration to average over.
-    th        0<th<1       0.1       exclusion threshold for SparCC.
-    xiter     int          10        number of exclusion iterations for sparcc.
-    =======   ============ ========= ================================================
     """
     comps = frame.columns
     cor_list = []  # list of cor matrices from different random fractions
