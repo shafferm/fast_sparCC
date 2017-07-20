@@ -191,6 +191,12 @@ def run_sparcc(f, th=.1, xiter=10):
     return v_base, c_base, cov_base
 
 
+def calc_sparcc(fracs, th, xiter, tol):
+    v_sparse, cor_sparse, cov_sparse = run_sparcc(fracs, th=th, xiter=xiter)
+    if np.max(np.abs(cor_sparse)) > 1 + tol:
+        raise ValueError('Sparsity assumption violated. SparCC will not run.')
+    return cor_sparse, np.diag(cov_sparse)
+
 def basis_corr(frame, iters=20, th=.1, xiter=10):
     """
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/ and adapted***
@@ -229,11 +235,9 @@ def basis_corr(frame, iters=20, th=.1, xiter=10):
     if k < 4:
         raise ValueError('Can not detect correlations between compositions of <4 components (%d given)' % k)
     for i in xrange(iters):
-        v_sparse, cor_sparse, cov_sparse = run_sparcc(fracs, th=th, xiter=xiter)
-        if np.max(np.abs(cor_sparse)) > 1 + tol:
-            raise ValueError('Sparsity assumption violated. SparCC will not run.')
-        var_list.append(np.diag(cov_sparse))
+        cor_sparse, cov_sparse = calc_sparcc(fracs, th, xiter, tol)
         cor_list.append(cor_sparse)
+        var_list.append(cov_sparse)
     cor_array = np.array(cor_list)
     var_med = np.nanmedian(var_list, axis=0)  # median variances
     cor_med = np.nanmedian(cor_array, axis=0)  # median correlations
