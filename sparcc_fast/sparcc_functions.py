@@ -142,7 +142,7 @@ def run_sparcc(f, th=.1, xiter=10):
     d = var_mat.shape[0]  # number of components
     m = np.ones((d, d)) + np.diag([d-2]*d)
     # get approx. basis variances and from them basis covariances/correlations
-    v_base = basis_var(f, var_mat_temp, m)
+    v_base = basis_var(var_mat_temp, m)
     c_base, cov_base = c_from_v(var_mat, v_base)
     # Refine by excluding strongly correlated pairs
     excluded_pairs = []
@@ -179,7 +179,7 @@ def run_sparcc(f, th=.1, xiter=10):
                 m[:, xcomp] = 0
                 m[xcomp, xcomp] = 1
         # run another sparcc iteration
-        v_base = basis_var(f, var_mat_temp, m)
+        v_base = basis_var(var_mat_temp, m)
         c_base, cov_base = c_from_v(var_mat, v_base)
         # set excluded components infered values to nans
         for xcomp in excluded_comp:
@@ -197,7 +197,8 @@ def calc_sparcc(fracs, th, xiter, tol):
         raise ValueError('Sparsity assumption violated. SparCC will not run.')
     return cor_sparse, np.diag(cov_sparse)
 
-def basis_corr(frame, iters=20, th=.1, xiter=10):
+
+def basis_corr(frame, iters=20, th=.1, xiter=10, tol=1e-3):
     """
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/ and adapted***
     ##Merged basis_corr from analysis_methods.py and get_correlations.py and main from get_correlations.py
@@ -214,7 +215,8 @@ def basis_corr(frame, iters=20, th=.1, xiter=10):
         0<th<1, default 0.1, exclusion threshold for SparCC.
     xiter : int
         default 10, number of exclusion iterations for sparcc.
-
+    tol: float
+        default 1e-3, tolerance for correlation range
     Returns
     -------
     cor_med: frame
@@ -228,13 +230,12 @@ def basis_corr(frame, iters=20, th=.1, xiter=10):
     comps = frame.columns
     cor_list = []  # list of cor matrices from different random fractions
     var_list = []  # list of cov matrices from different random fractions
-    fracs = to_fractions(frame)
-    k = fracs.shape[1]
-    tol = 1e-3  # tolerance for correlation range
-    # compute basis variances & correlations
-    if k < 4:
-        raise ValueError('Can not detect correlations between compositions of <4 components (%d given)' % k)
     for i in xrange(iters):
+        fracs = to_fractions(frame)
+        k = fracs.shape[1]
+        # compute basis variances & correlations
+        if k < 4:
+            raise ValueError('Can not detect correlations between compositions of <4 components (%d given)' % k)
         cor_sparse, cov_sparse = calc_sparcc(fracs, th, xiter, tol)
         cor_list.append(cor_sparse)
         var_list.append(cov_sparse)
