@@ -3,9 +3,9 @@ from sparcc_functions import sparcc
 from bootstrap_correlations import bootstrap_correlations
 
 
-def sparcc_correlation(table):
+def sparcc_correlation(table, procs):
     df = utils.biom_to_pandas(table)
-    cor, _ = sparcc(df)
+    cor, _ = sparcc(df, procs=procs)
     correls = utils.df_to_correls(cor)
     return correls
 
