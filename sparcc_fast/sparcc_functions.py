@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from numpy.random.mtrand import dirichlet
+from functools import partial
+from scipy.spatial.distance import squareform
 
 __author__ = 'shafferm'
 
@@ -191,14 +193,24 @@ def run_sparcc(f, th=.1, xiter=10):
     return v_base, c_base, cov_base
 
 
-def calc_sparcc(fracs, th, xiter, tol):
+def calc_sparcc(frame, th, xiter, tol):
+    fracs = to_fractions(frame)
+    k = fracs.shape[1]
+    # compute basis variances & correlations
+    if k < 4:
+        raise ValueError('Can not detect correlations between compositions of <4 components (%d given)' % k)
     v_sparse, cor_sparse, cov_sparse = run_sparcc(fracs, th=th, xiter=xiter)
     if np.max(np.abs(cor_sparse)) > 1 + tol:
         raise ValueError('Sparsity assumption violated. SparCC will not run.')
     return cor_sparse, np.diag(cov_sparse)
 
 
-def basis_corr(frame, iters=20, th=.1, xiter=10, tol=1e-3):
+def repeater(x, reps):
+    for i in xrange(reps):
+        yield x
+
+
+def basis_corr(frame, iters=20, th=.1, xiter=10, tol=1e-3, procs=1):
     """
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/ and adapted***
     ##Merged basis_corr from analysis_methods.py and get_correlations.py and main from get_correlations.py
@@ -217,6 +229,64 @@ def basis_corr(frame, iters=20, th=.1, xiter=10, tol=1e-3):
         default 10, number of exclusion iterations for sparcc.
     tol: float
         default 1e-3, tolerance for correlation range
+    procs: int
+        number of processors to use
+
+    Returns
+    -------
+    cor_med: frame
+        Estimated correlation matrix.
+        Labels are column labels of input frame.
+    cov_med: frame/None
+        If method in {SparCC, clr} : Estimated covariance matrix.
+        Labels are column labels of input frame.
+        Otherwise: None.
+    """
+    cor_list = []  # list of cor matrices from different random fractions
+    var_list = []  # list of cov matrices from different random fractions
+    if procs == 1:
+        for i in xrange(iters):
+            cor_sparse, cov_sparse = calc_sparcc(frame, th, xiter, tol)
+            cor_list.append(cor_sparse)
+            var_list.append(cov_sparse)
+    else:
+        import multiprocessing
+        pool = multiprocessing.Pool(procs)
+        pfun = partial(calc_sparcc, th=th, xiter=xiter, tol=tol)
+        results = pool.map(pfun, repeater(frame, iters))
+        cor_list = [i[0] for i in results]
+        var_list = [i[1] for i in results]
+    cor_array = np.array(cor_list)
+    var_med = np.nanmedian(var_list, axis=0)  # median variances
+    cor_med = np.nanmedian(cor_array, axis=0)  # median correlations
+    x, y = np.meshgrid(var_med, var_med)
+    cov_med = cor_med * x**0.5 * y**0.5
+
+    return squareform(cov_med, checks=False)
+
+
+def sparcc(frame, iters=20, th=.1, xiter=10, tol=1e-3, procs=1):
+    """
+    ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/ and adapted***
+    ##Merged basis_corr from analysis_methods.py and get_correlations.py and main from get_correlations.py
+    Compute correlations between all columns of a counts frame.
+    This is a wrapper around pysurvey.analysis.basis_correlations.main
+
+    Parameters
+    ----------
+    frame : pd.Dataframe
+        2D array of counts. Columns are components, rows are samples.
+    iters : int
+        default 20, number of estimation iteration to average over.
+    th : float
+        0<th<1, default 0.1, exclusion threshold for SparCC.
+    xiter : int
+        default 10, number of exclusion iterations for sparcc.
+    tol: float
+        default 1e-3, tolerance for correlation range
+    procs: int
+        number of processors to use
+
     Returns
     -------
     cor_med: frame
@@ -230,15 +300,18 @@ def basis_corr(frame, iters=20, th=.1, xiter=10, tol=1e-3):
     comps = frame.columns
     cor_list = []  # list of cor matrices from different random fractions
     var_list = []  # list of cov matrices from different random fractions
-    for i in xrange(iters):
-        fracs = to_fractions(frame)
-        k = fracs.shape[1]
-        # compute basis variances & correlations
-        if k < 4:
-            raise ValueError('Can not detect correlations between compositions of <4 components (%d given)' % k)
-        cor_sparse, cov_sparse = calc_sparcc(fracs, th, xiter, tol)
-        cor_list.append(cor_sparse)
-        var_list.append(cov_sparse)
+    if procs == 1:
+        for i in xrange(iters):
+            cor_sparse, cov_sparse = calc_sparcc(frame, th, xiter, tol)
+            cor_list.append(cor_sparse)
+            var_list.append(cov_sparse)
+    else:
+        import multiprocessing
+        pool = multiprocessing.Pool(procs)
+        pfun = partial(calc_sparcc, th=th, xiter=xiter, tol=tol)
+        results = pool.map(pfun, repeater(frame, iters))
+        cor_list = [i[0] for i in results]
+        var_list = [i[1] for i in results]
     cor_array = np.array(cor_list)
     var_med = np.nanmedian(var_list, axis=0)  # median variances
     cor_med = np.nanmedian(cor_array, axis=0)  # median correlations

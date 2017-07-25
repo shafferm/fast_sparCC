@@ -2,10 +2,9 @@
 
 import argparse
 from biom import load_table
-from sparcc_fast.sparcc_functions import basis_corr
+from sparcc_fast.sparcc_functions import sparcc
 from sparcc_fast import utils
 from sparcc_fast.bootstrap_correlations import bootstrap_correlations
-from sparcc_fast.utils import sparcc_paper_filter, min_sample_filter
 
 __author__ = 'shafferm'
 
@@ -19,25 +18,25 @@ def main(args):
 
     # filter
     if args.min_samples is not None:
-        df = min_sample_filter(df, args.min_samples)
+        df = utils.min_sample_filter(df, args.min_samples)
         print "Table filtered: " + str(table.shape[1]) + " observations"
         print ""
     elif args.sparcc_filter is True:
-        df = sparcc_paper_filter(df)
+        df = utils.sparcc_paper_filter(df)
         print "Table filtered: " + str(table.shape[1]) + " observations"
         print ""
 
     print "calculating correlations"
-    cor, cov = basis_corr(df)
+    cor, cov = sparcc(df, procs=args.procs)
     correls = utils.df_to_correls(cor)
 
     if not args.corr_only:
         print "bootstrapping"
         correls['p_value'] = bootstrap_correlations(df, cor, args.boots, args.procs)
         # adjust p-value if desired
-        if args.padjust == "FDR":
+        if args.p_adjust == "FDR":
             correls['p_adjusted'] = utils.bh_adjust(correls['p_value'])
-        elif args.padjust == "bonferroni":
+        elif args.p_adjust == "bonferroni":
             correls, header = utils.bonferroni_adjust(correls['p_value'])
     correls.to_csv(args.output, sep='\t', index=False)
 
