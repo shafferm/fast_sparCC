@@ -15,5 +15,8 @@ setup(
 
     install_requires=["numpy", "scipy", "biom-format", "pandas"],
     scripts=["scripts/fast_sparCC.py"],
-    packages=find_packages()
+    packages=find_packages(),
+
+    setup_requires=['pytest-runner'],
+    test_require=['pytest']
 )

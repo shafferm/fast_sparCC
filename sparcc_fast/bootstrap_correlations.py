@@ -2,32 +2,9 @@ import numpy as np
 import sparcc_functions
 from scipy.spatial.distance import squareform
 from functools import partial
+from sparcc_functions import permute_w_replacement
 
 __author__ = 'shafferm'
-
-
-def permute_w_replacement(frame):
-    '''
-    ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey and adapted***
-    Permute the frame values across the given axis.
-    Create simulated dataset were the counts of each component (column)
-    in each sample (row), are randomly sampled from the all the
-    counts of that component in all samples.
-
-    Parameters
-    ----------
-    frame : DataFrame
-        Frame to permute.
-
-    Returns
-    -------
-    Permuted DataFrame (new instance).
-    '''
-    from numpy.random import randint
-    s = frame.shape[0]
-    fun = lambda x: x.values[randint(0,s,(1,s))][0]
-    perm = frame.apply(fun, axis=0)
-    return perm
 
 
 def bootstrapped_correlation(bootstrap, df, cor):

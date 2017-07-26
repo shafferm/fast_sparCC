@@ -12,20 +12,16 @@ def variation_mat(frame):
     ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey/***
     Return the variation matrix of frame.
     Element i,j is the variance of the log ratio of components i and j."""
-
     x = 1.*np.asarray(frame)
     n, m = x.shape
-    if m > 1000:
+    xx = np.tile(x.reshape((n, m, 1)), (1, 1, m))
+    xx_t = xx.transpose(0, 2, 1)
+    try:
+        l = np.log(1.*xx/xx_t)
+        v_mat = l.var(axis=0, ddof=1)
+        return v_mat
+    except MemoryError:
         return variation_mat_slow(frame)
-    else:
-        xx = np.tile(x.reshape((n, m, 1)), (1, 1, m))
-        xx_t = xx.transpose(0, 2, 1)
-        try:
-            l = np.log(1.*xx/xx_t)
-            v_mat = l.var(axis=0, ddof=1)
-            return v_mat
-        except MemoryError:
-            return variation_mat_slow(frame)
 
 
 def variation_mat_slow(frame):
@@ -69,14 +65,11 @@ def to_fractions(frame, p_counts=1, axis=0):
         Estimated component fractions.
         Returns new instance of same class as input frame.
     """
-    def dir_fun(x):
-        a = x+p_counts
-        f = dirichlet(a)
-        return f
+    frame = frame+p_counts
     if isinstance(frame, pd.DataFrame):
-        fracs = frame.apply(dir_fun, 1-axis)
+        fracs = frame.apply(dirichlet, 1-axis)
     else:
-        fracs = np.apply_along_axis(dir_fun, 1-axis, frame)
+        fracs = np.apply_along_axis(dirichlet, 1-axis, frame)
     return fracs
 
 
@@ -324,3 +317,27 @@ def sparcc(frame, iters=20, th=.1, xiter=10, tol=1e-3, procs=1):
     else:
         cov = pd.DataFrame(cov_med, index=comps, columns=comps)
     return cor, cov
+
+
+def permute_w_replacement(frame):
+    """
+    ***STOLEN FROM https://bitbucket.org/yonatanf/pysurvey and adapted***
+    Permute the frame values across the given axis.
+    Create simulated dataset were the counts of each component (column)
+    in each sample (row), are randomly sampled from the all the
+    counts of that component in all samples.
+
+    Parameters
+    ----------
+    frame : DataFrame
+        Frame to permute.
+
+    Returns
+    -------
+    Permuted DataFrame (new instance).
+    """
+    from numpy.random import randint
+    s = frame.shape[0]
+    fun = lambda x: x.values[randint(0,s,(1,s))][0]
+    perm = frame.apply(fun, axis=0)
+    return perm
